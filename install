@@ -81,7 +81,7 @@ echo "en_US.UTF-8 UTF-8" > /mnt/etc/locale.gen
 echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
 echo "KEYMAP=dvorak" > /mnt/etc/vconsole.conf
 echo ${hostname} > /mnt/etc/hostname
-sed -i -e 's/^FILES=""$/FILES="\/crypto_keyfile.bin"/g' /etc/mkinitcpio.conf
+sed -i -e 's/^FILES=""$/FILES="\/crypto_keyfile.bin"/g' /mnt/etc/mkinitcpio.conf
 sed -i -e 's/^HOOKS=".*"$/HOOKS="base udev autodetect modconf keyboard keymap block encrypt filesystems fsck"/g' /mnt/etc/mkinitcpio.conf
 
 # Chroot
@@ -99,7 +99,7 @@ EOF
 
 #rEFInd
 cat << EOF > /mnt/boot/efi/EFI/refind/refind.conf
-include themes/rEFInd-minial/theme.conf
+include themes/rEFInd-minimal/theme.conf
 dont_scan_volumes "T440S_ROOT,T440S_BOOT,T440S_ESP"
 timeout 5
 use_graphics_for + linux
@@ -109,6 +109,6 @@ menuentry "Arch Linux" {
     volume "$(blkid -s PARTUUID -o value ${boot_disk}1)"
     loader /vmlinuz-linux
     initrd /initramfs-linux.img
-    options "cryptdevice=UUID=$(blkid -s UUID -o value ${root_disk}):cryptroot root=/dev/mapper/cryptroot rw quiet"
+    options "cryptdevice=UUID=$(blkid -s UUID -o value ${root_disk}1):cryptroot root=/dev/mapper/cryptroot rw quiet"
 }
 EOF
