@@ -57,7 +57,7 @@ mkfs.btrfs -f ${boot_disk}1
 mkfs.vfat -F32 ${boot_disk}2
 
 # Labeling
-btrfs filesystem label ${root_disk}1 T440S_ROOT
+btrfs filesystem label /dev/mapper/cryptroot T440S_ROOT
 btrfs filesystem label ${boot_disk}1 T440S_BOOT
 fatlabel ${boot_disk}2 T440S_ESP
 
