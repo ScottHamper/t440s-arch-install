@@ -89,7 +89,12 @@ rm /mnt/boot/refind_linux.conf
 mkdir /mnt/boot/efi/EFI/refind/themes
 git clone -b t440s --depth 1 https://github.com/ScottHamper/rEFInd-minimal.git /mnt/boot/efi/EFI/refind/themes/rEFInd-minimal
 rm -rf /mnt/boot/efi/EFI/refind/themes/rEFInd-minimal/.git
-cat << EOF >> /mnt/boot/efi/EFI/refind/refind.conf
+cat << EOF > /mnt/boot/efi/EFI/refind/refind.conf
+include themes/rEFInd-minial/theme.conf
+dont_scan_volumes "T440S_ROOT,T440S_BOOT,T440S_ESP"
+timeout 5
+use_graphics_for + linux
+
 menuentry "Arch Linux" {
     icon /EFI/refind/themes/rEFInd-minimal/icons/os_arch.png
     volume "$(blkid -s PARTUUID -o value ${boot_disk}1)"
@@ -97,7 +102,4 @@ menuentry "Arch Linux" {
     initrd /initramfs-linux.img
     options "rw root=PARTUUID=$(blkid -s PARTUUID -o value ${root_disk}1)"
 }
-
-dont_scan_volumes "T440S_BOOT"
-include themes/rEFInd-minial/theme.conf
 EOF
