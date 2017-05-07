@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# Auto-Installation Script
+# ========================
+# This script aims to automate the process of installing Arch Linux onto my Lenovo T440s.
+# As a result, the configuration is opinionated. However, the script generally follows
+# along with the guide on the [Arch Linux wiki](https://wiki.archlinux.org/index.php/Installation_guide).
+#
+# Pre-Installation Setup
+# ----------------------
+# It's assumed that this script will be run after cloning the git repo. As a result,
+# there's a number of steps that will need to be taken manually in preparation.
+#
+### Configure WiFi Connection
+# 1. `systemctl stop dhcpcd@<TAB>`
+# 2. `ip link set wlp3s0 up`
+# 3. `wpa_supplicant -B -i wlp3s0 -c <(wpa_passphrase "<SSID>" "<PASSPHRASE>")`
+# 4. `systemctl start dhcpcd@wlp3s0.service`
+# 5. `ping 8.8.8.8`
+#
+### Clone Git Repo
+# 1. `mount -o remount,size=2G /run/archiso/cowspace`
+# 2. `pacman -Sy git`
+# 3. `git clone https://github.com/ScottHamper/t440s-arch-install.git`
+#
+# Alternatively, without Git:
+# 1. `curl https://raw.githubusercontent.com/ScottHamper/t440s-arch-install/master/install -o install`
+
+# Determine root/boot disks by using `lsblk`
+while getopts ":r:b:h:" arg; do
+    case ${arg} in
+        r) root_disk=$OPTARG;;
+        b) boot_disk=$OPTARG;;
+        h) hostname=$OPTARG;;
+    esac
+done
+
+#TODO: Validation of args
+
+timedatectl set-ntp true
+
+# Wipe out the GPT and create brand new partitions
+sgdisk --clear ${root_disk}
+sgdisk -n 1:0:0 ${root_disk}
+
+sgdisk --clear ${boot_disk}
+sgdisk -n 1:0:+200M ${boot_disk}
+sgdisk -n 2:0:+512M -t 2:ef00 ${boot_disk}
+
+# Formatting
+mkfs.btrfs ${root_disk}1
+mkfs.btrfs ${boot_disk}1
+mkfs.vfat -F32 ${boot_disk}2
+
+# Mounting
+mount ${root_disk}1 /mnt
+mkdir /mnt/boot
+mount ${boot_disk}1 /mnt/boot
+mkdir /mnt/boot/efi
+mount ${boot_disk}2 /mnt/boot/efi
+
+# Installation
+pacstrap /mnt base btrfs-progs iw wpa_supplicant refind-efi
+genfstab -U /mnt >> /mnt/etc/fstab
+
+# Chroot
+arch-chroot /mnt << EOF
+# Set time zone
+# Assumes hardware clock is UTC
+ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
+hwclock --systohc
+
+# Locale
+echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
+echo "es_US.UTF-8" > /etc/locale.conf
+echo "KEYMAP=dvorak" > /etc/vconsole.conf
+locale-gen
+
+# Hostname
+echo ${hostname} > /etc/hostname
+
+# Mkinitcpio
+sed -i -e 's/^HOOKS=".*"$/HOOKS="base udev autodetect modconf keyboard keymap block filesystems fsck"/g' /etc/mkinitcpio.conf
+mkinitcpio -p linux
+
+# rEFInd
+refind-install
+rm /boot/refind_linux.conf
+
+cat << EOF2 >> /boot/efi/EFI/refind/refind.conf
+menuentry "Arch Linux" {
+    icon /EFI/refind/icons/os_arch.png
+    volume "$(blkid -s PARTUUID -o value ${boot_disk}1)"
+    loader /vmlinuz-linux
+    initrd /initramfs-linux.img
+    options "rw root=PARTUUID=$(blkid -s PARTUUID -o value ${root_disk}1)"
+}
+
+EOF2
+EOF
