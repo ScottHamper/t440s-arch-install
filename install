@@ -52,6 +52,11 @@ mkfs.btrfs -f ${root_disk}1
 mkfs.btrfs -f ${boot_disk}1
 mkfs.vfat -F32 ${boot_disk}2
 
+# Labeling
+btrfs filesystem label ${root_disk}1 T440S_ROOT
+btrfs filesystem label ${boot_disk}1 T440S_BOOT
+fatlabel ${boot_disk}2 T440S_ESP
+
 # Mounting
 mount ${root_disk}1 /mnt
 mkdir /mnt/boot
@@ -81,12 +86,18 @@ EOF
 
 #rEFInd
 rm /mnt/boot/refind_linux.conf
+mkdir /mnt/boot/efi/EFI/refind/themes
+git clone -b t440s --depth 1 https://github.com/ScottHamper/rEFInd-minimal.git /mnt/boot/efi/EFI/refind/themes/rEFInd-minimal
+rm -rf /mnt/boot/efi/EFI/refind/themes/rEFInd-minimal/.git
 cat << EOF >> /mnt/boot/efi/EFI/refind/refind.conf
 menuentry "Arch Linux" {
-    icon /EFI/refind/icons/os_arch.png
+    icon /EFI/refind/themes/rEFInd-minimal/icons/os_arch.png
     volume "$(blkid -s PARTUUID -o value ${boot_disk}1)"
     loader /vmlinuz-linux
     initrd /initramfs-linux.img
     options "rw root=PARTUUID=$(blkid -s PARTUUID -o value ${root_disk}1)"
 }
+
+dont_scan_volumes "T440S_BOOT"
+include themes/rEFInd-minial/theme.conf
 EOF
