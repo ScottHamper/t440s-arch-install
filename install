@@ -48,8 +48,8 @@ sgdisk -n 1:0:+200M ${boot_disk}
 sgdisk -n 2:0:+512M -t 2:ef00 ${boot_disk}
 
 # Formatting
-mkfs.btrfs ${root_disk}1
-mkfs.btrfs ${boot_disk}1
+mkfs.btrfs -f ${root_disk}1
+mkfs.btrfs -f ${boot_disk}1
 mkfs.vfat -F32 ${boot_disk}2
 
 # Mounting
