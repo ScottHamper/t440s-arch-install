@@ -21,7 +21,7 @@
 ### Clone Git Repo
 # 1. `mount -o remount,size=2G /run/archiso/cowspace`
 # 2. `pacman -Sy git`
-# 3. `git clone https://github.com/ScottHamper/t440s-arch-install.git`
+# 3. `git clone --depth 1 https://github.com/ScottHamper/t440s-arch-install.git`
 #
 # Alternatively, without Git:
 # 1. `curl https://raw.githubusercontent.com/ScottHamper/t440s-arch-install/master/install -o install`
@@ -60,7 +60,7 @@ mkdir /mnt/boot/efi
 mount ${boot_disk}2 /mnt/boot/efi
 
 # Installation
-pacstrap /mnt base btrfs-progs iw wpa_supplicant refind-efi
+pacstrap /mnt base btrfs-progs iw wpa_supplicant refind-efi git
 genfstab -U /mnt >> /mnt/etc/fstab
 
 # Chroot Prep
