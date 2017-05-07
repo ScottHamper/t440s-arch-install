@@ -109,6 +109,6 @@ menuentry "Arch Linux" {
     volume "$(blkid -s PARTUUID -o value ${boot_disk}1)"
     loader /vmlinuz-linux
     initrd /initramfs-linux.img
-    options "cryptdevice=UUID=$(blkid -s UUID -o value ${root_disk}1):cryptroot root=/dev/mapper/cryptroot rw quiet"
+    options "cryptdevice=UUID=$(blkid -s UUID -o value ${root_disk}):cryptroot root=/dev/mapper/cryptroot rw quiet"
 }
 EOF
