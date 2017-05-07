@@ -47,8 +47,12 @@ sgdisk --clear ${boot_disk}
 sgdisk -n 1:0:+200M ${boot_disk}
 sgdisk -n 2:0:+512M -t 2:ef00 ${boot_disk}
 
-# Formatting
-mkfs.btrfs -f ${root_disk}1
+# LUKS/Formatting
+head -c 4096 < /dev/random > /root/crypto_keyfile.bin
+chmod 0400 /root/crypto_keyfile.bin
+cryptsetup -q --use-random --key-size 512 --iter-time 2000 luksFormat ${root_disk} /root/crypto_keyfile.bin
+cryptsetup open ${root_disk} cryptroot --key-file /root/crypto_keyfile.bin
+mkfs.btrfs -f /dev/mapper/cryptroot
 mkfs.btrfs -f ${boot_disk}1
 mkfs.vfat -F32 ${boot_disk}2
 
@@ -58,7 +62,7 @@ btrfs filesystem label ${boot_disk}1 T440S_BOOT
 fatlabel ${boot_disk}2 T440S_ESP
 
 # Mounting
-mount ${root_disk}1 /mnt
+mount /dev/mapper/cryptroot /mnt
 mkdir /mnt/boot
 mount ${boot_disk}1 /mnt/boot
 mkdir /mnt/boot/efi
@@ -69,12 +73,16 @@ pacstrap /mnt base btrfs-progs iw wpa_supplicant refind-efi git
 genfstab -U /mnt >> /mnt/etc/fstab
 
 # Chroot Prep
+mv /root/crypto_keyfile.bin /mnt
+chmod 000 /mnt/crypto_keyfile.bin
+chmod 600 /mnt/boot/initramfs-linux*
 ln -sf /usr/share/zoneinfo/America/New_York /mnt/etc/localtime
 echo "en_US.UTF-8 UTF-8" > /mnt/etc/locale.gen
 echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
 echo "KEYMAP=dvorak" > /mnt/etc/vconsole.conf
 echo ${hostname} > /mnt/etc/hostname
-sed -i -e 's/^HOOKS=".*"$/HOOKS="base udev autodetect modconf keyboard keymap block filesystems fsck"/g' /mnt/etc/mkinitcpio.conf
+sed -i -e 's/^FILES=""$/FILES="\/crypto_keyfile.bin"/g' /etc/mkinitcpio.conf
+sed -i -e 's/^HOOKS=".*"$/HOOKS="base udev autodetect modconf keyboard keymap block encrypt filesystems fsck"/g' /mnt/etc/mkinitcpio.conf
 
 # Chroot
 arch-chroot /mnt << EOF
@@ -100,6 +108,6 @@ menuentry "Arch Linux" {
     volume "$(blkid -s PARTUUID -o value ${boot_disk}1)"
     loader /vmlinuz-linux
     initrd /initramfs-linux.img
-    options "root=PARTUUID=$(blkid -s PARTUUID -o value ${root_disk}1) rw quiet"
+    options "cryptdevice=UUID=$(blkid -s UUID -o value ${root_disk}):cryptroot root=/dev/mapper/cryptroot rw quiet"
 }
 EOF
