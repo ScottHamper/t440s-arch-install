@@ -26,7 +26,7 @@
 # Alternatively, without Git:
 # 1. `curl https://raw.githubusercontent.com/ScottHamper/t440s-arch-install/master/install -o install`
 
-# Determine root/boot disks by using `lsblk`
+# Use `lsblk` to determine which devices should be passed into the script
 while getopts ":r:b:h:" arg; do
     case ${arg} in
         r) root_disk=$OPTARG;;
@@ -39,7 +39,7 @@ done
 
 timedatectl set-ntp true
 
-# Wipe out the GPT and create brand new partitions
+# Partitioning
 sgdisk --clear ${root_disk}
 sgdisk -n 1:0:0 ${root_disk}
 
@@ -47,11 +47,13 @@ sgdisk --clear ${boot_disk}
 sgdisk -n 1:0:+200M ${boot_disk}
 sgdisk -n 2:0:+512M -t 2:ef00 ${boot_disk}
 
-# LUKS/Formatting
+# Setting up LUKS
 head -c 4096 < /dev/random > /root/crypto_keyfile.bin
-chmod 0400 /root/crypto_keyfile.bin
+chmod 0000 /root/crypto_keyfile.bin
 cryptsetup -q --use-random --key-size 512 --iter-time 2000 luksFormat ${root_disk} /root/crypto_keyfile.bin
 cryptsetup open ${root_disk} cryptroot --key-file /root/crypto_keyfile.bin
+
+# Formatting
 mkfs.btrfs -f /dev/mapper/cryptroot
 mkfs.btrfs -f ${boot_disk}1
 mkfs.vfat -F32 ${boot_disk}2
@@ -68,13 +70,12 @@ mount ${boot_disk}1 /mnt/boot
 mkdir /mnt/boot/efi
 mount ${boot_disk}2 /mnt/boot/efi
 
-# Installation
+# Installing
 pacstrap /mnt base btrfs-progs iw wpa_supplicant refind-efi git
 genfstab -U /mnt >> /mnt/etc/fstab
 
-# Chroot Prep
+# Configuring
 mv /root/crypto_keyfile.bin /mnt
-chmod 000 /mnt/crypto_keyfile.bin
 chmod 600 /mnt/boot/initramfs-linux*
 ln -sf /usr/share/zoneinfo/America/New_York /mnt/etc/localtime
 echo "en_US.UTF-8 UTF-8" > /mnt/etc/locale.gen
@@ -85,7 +86,6 @@ sed -i -e 's/^BINARIES=""$/BINARIES="\/usr\/bin\/btrfs"/g' /mnt/etc/mkinitcpio.c
 sed -i -e 's/^FILES=""$/FILES="\/crypto_keyfile.bin"/g' /mnt/etc/mkinitcpio.conf
 sed -i -e 's/^HOOKS=".*"$/HOOKS="base udev autodetect modconf keyboard keymap block encrypt filesystems fsck"/g' /mnt/etc/mkinitcpio.conf
 
-# Chroot
 arch-chroot /mnt << EOF
 hwclock --systohc # Assumes hardware clock is UTC
 locale-gen
@@ -98,7 +98,6 @@ git clone -b t440s --depth 1 https://github.com/ScottHamper/rEFInd-minimal.git /
 rm -rf /boot/efi/EFI/refind/themes/rEFInd-minimal/.git
 EOF
 
-#rEFInd
 cat << EOF > /mnt/boot/efi/EFI/refind/refind.conf
 include themes/rEFInd-minimal/theme.conf
 dont_scan_volumes "T440S_ROOT,T440S_BOOT,T440S_ESP"
