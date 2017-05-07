@@ -81,14 +81,15 @@ arch-chroot /mnt << EOF
 hwclock --systohc # Assumes hardware clock is UTC
 locale-gen
 mkinitcpio -p linux
+
 refind-install
+rm /boot/refind_linux.conf
+mkdir /boot/efi/EFI/refind/themes
+git clone -b t440s --depth 1 https://github.com/ScottHamper/rEFInd-minimal.git /boot/efi/EFI/refind/themes/rEFInd-minimal
+rm -rf /boot/efi/EFI/refind/themes/rEFInd-minimal/.git
 EOF
 
 #rEFInd
-rm /mnt/boot/refind_linux.conf
-mkdir /mnt/boot/efi/EFI/refind/themes
-git clone -b t440s --depth 1 https://github.com/ScottHamper/rEFInd-minimal.git /mnt/boot/efi/EFI/refind/themes/rEFInd-minimal
-rm -rf /mnt/boot/efi/EFI/refind/themes/rEFInd-minimal/.git
 cat << EOF > /mnt/boot/efi/EFI/refind/refind.conf
 include themes/rEFInd-minial/theme.conf
 dont_scan_volumes "T440S_ROOT,T440S_BOOT,T440S_ESP"
