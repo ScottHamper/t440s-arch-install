@@ -100,6 +100,6 @@ menuentry "Arch Linux" {
     volume "$(blkid -s PARTUUID -o value ${boot_disk}1)"
     loader /vmlinuz-linux
     initrd /initramfs-linux.img
-    options "rw root=PARTUUID=$(blkid -s PARTUUID -o value ${root_disk}1)"
+    options "root=PARTUUID=$(blkid -s PARTUUID -o value ${root_disk}1) rw quiet"
 }
 EOF
