@@ -63,31 +63,25 @@ mount ${boot_disk}2 /mnt/boot/efi
 pacstrap /mnt base btrfs-progs iw wpa_supplicant refind-efi
 genfstab -U /mnt >> /mnt/etc/fstab
 
+# Chroot Prep
+ln -sf /usr/share/zoneinfo/America/New_York /mnt/etc/localtime
+echo "en_US.UTF-8 UTF-8" > /mnt/etc/locale.gen
+echo "en_US.UTF-8" > /mnt/etc/locale.conf
+echo "KEYMAP=dvorak" > /mnt/etc/vconsole.conf
+echo ${hostname} > /mnt/etc/hostname
+sed -i -e 's/^HOOKS=".*"$/HOOKS="base udev autodetect modconf keyboard keymap block filesystems fsck"/g' /mnt/etc/mkinitcpio.conf
+
 # Chroot
 arch-chroot /mnt << EOF
-# Set time zone
-# Assumes hardware clock is UTC
-ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
-hwclock --systohc
-
-# Locale
-echo "en_US.UTF-8 UTF-8" > /etc/locale.gen
-echo "en_US.UTF-8" > /etc/locale.conf
-echo "KEYMAP=dvorak" > /etc/vconsole.conf
+hwclock --systohc # Assumes hardware clock is UTC
 locale-gen
-
-# Hostname
-echo ${hostname} > /etc/hostname
-
-# Mkinitcpio
-sed -i -e 's/^HOOKS=".*"$/HOOKS="base udev autodetect modconf keyboard keymap block filesystems fsck"/g' /etc/mkinitcpio.conf
 mkinitcpio -p linux
-
-# rEFInd
 refind-install
-rm /boot/refind_linux.conf
+EOF
 
-cat << EOF2 >> /boot/efi/EFI/refind/refind.conf
+#rEFInd
+rm /mnt/boot/refind_linux.conf
+cat << EOF >> /mnt/boot/efi/EFI/refind/refind.conf
 menuentry "Arch Linux" {
     icon /EFI/refind/icons/os_arch.png
     volume "$(blkid -s PARTUUID -o value ${boot_disk}1)"
@@ -95,6 +89,4 @@ menuentry "Arch Linux" {
     initrd /initramfs-linux.img
     options "rw root=PARTUUID=$(blkid -s PARTUUID -o value ${root_disk}1)"
 }
-
-EOF2
 EOF
