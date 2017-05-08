@@ -35,6 +35,16 @@ while getopts ":r:b:h:" arg; do
     esac
 done
 
+assert_disk_exists() {
+    if [ "$(blkid -o device ${1})" != "${1}" ]; then
+        echo "Error: device '${1}' does not exist."
+        exit 1
+    fi
+}
+
+assert_disk_exists ${root_disk}
+assert_disk_exists ${boot_disk}
+
 uuid() {
     blkid -s UUID -o value $1
 }
