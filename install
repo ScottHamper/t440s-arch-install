@@ -26,6 +26,8 @@
 # Alternatively, without Git:
 # 1. `curl https://raw.githubusercontent.com/ScottHamper/t440s-arch-install/master/install -o install`
 
+set -e
+
 # Use `lsblk` to determine which devices should be passed into the script
 while getopts ":r:b:h:" arg; do
     case ${arg} in
