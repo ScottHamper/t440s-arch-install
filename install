@@ -75,7 +75,7 @@ mkdir /mnt/boot/efi
 mount ${boot_disk}2 /mnt/boot/efi
 
 # Installing
-pacstrap /mnt base btrfs-progs iw wpa_supplicant refind-efi git
+pacstrap /mnt base intel-ucode btrfs-progs iw wpa_supplicant refind-efi git
 cat << EOF > /mnt/etc/fstab
 # <file system>                              <dir>       <type>  <options>    <dump> <pass>
 UUID=$(uuid /dev/mapper/cryptroot)    /           btrfs   rw,noatime,ssd,space_cache,subvolid=5,subvol=/      0 0
@@ -116,8 +116,8 @@ use_graphics_for + linux
 menuentry "Arch Linux" {
     icon /EFI/refind/themes/rEFInd-minimal/icons/os_arch.png
     volume "$(blkid -s PARTUUID -o value ${boot_disk}1)"
-    loader /vmlinuz-linux
-    initrd /initramfs-linux.img
-    options "cryptdevice=UUID=$(uuid ${root_disk}):cryptroot root=/dev/mapper/cryptroot rw quiet"
+    loader vmlinuz-linux
+    initrd initramfs-linux.img
+    options "cryptdevice=UUID=$(uuid ${root_disk}):cryptroot root=/dev/mapper/cryptroot rw quiet initrd=intel-ucode.img"
 }
 EOF
