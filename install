@@ -35,6 +35,10 @@ while getopts ":r:b:h:" arg; do
     esac
 done
 
+uuid() {
+    blkid -s UUID -o value $1
+}
+
 #TODO: Validation of args
 
 timedatectl set-ntp true
@@ -74,9 +78,9 @@ mount ${boot_disk}2 /mnt/boot/efi
 pacstrap /mnt base btrfs-progs iw wpa_supplicant refind-efi git
 cat << EOF > /mnt/etc/fstab
 # <file system>                              <dir>       <type>  <options>    <dump> <pass>
-UUID=$(blkid -s UUID -o value /dev/mapper/cryptroot)    /           btrfs   rw,noatime,ssd,space_cache,subvolid=5,subvol=/      0 0
-UUID=$(blkid -s UUID -o value ${boot_disk}1)    /boot       btrfs   noauto,rw,noatime,space_cache,subvolid=5,subvol=/   0 0
-UUID=$(blkid -s UUID -o value ${boot_disk}2)    /boot/efi   vfat    noauto,rw,noatime,fmask=0022,dmask=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro  0 2
+UUID=$(uuid /dev/mapper/cryptroot)    /           btrfs   rw,noatime,ssd,space_cache,subvolid=5,subvol=/      0 0
+UUID=$(uuid ${boot_disk}1)    /boot       btrfs   noauto,rw,noatime,space_cache,subvolid=5,subvol=/   0 0
+UUID=$(uuid ${boot_disk}2)    /boot/efi   vfat    noauto,rw,noatime,fmask=0022,dmask=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro  0 2
 EOF
 
 # Configuring
@@ -114,6 +118,6 @@ menuentry "Arch Linux" {
     volume "$(blkid -s PARTUUID -o value ${boot_disk}1)"
     loader /vmlinuz-linux
     initrd /initramfs-linux.img
-    options "cryptdevice=UUID=$(blkid -s UUID -o value ${root_disk}):cryptroot root=/dev/mapper/cryptroot rw quiet"
+    options "cryptdevice=UUID=$(uuid ${root_disk}):cryptroot root=/dev/mapper/cryptroot rw quiet"
 }
 EOF
