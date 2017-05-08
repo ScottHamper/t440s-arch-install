@@ -72,7 +72,12 @@ mount ${boot_disk}2 /mnt/boot/efi
 
 # Installing
 pacstrap /mnt base btrfs-progs iw wpa_supplicant refind-efi git
-genfstab -U /mnt >> /mnt/etc/fstab
+cat << EOF > /mnt/etc/fstab
+# <file system>                              <dir>       <type>  <options>    <dump> <pass>
+UUID=$(blkid -s UUID -o value /dev/mapper/cryptroot)    /           btrfs   rw,noatime,ssd,space_cache,subvolid=5,subvol=/      0 0
+UUID=$(blkid -s UUID -o value ${boot_disk}1)    /boot       btrfs   noauto,rw,noatime,space_cache,subvolid=5,subvol=/   0 0
+UUID=$(blkid -s UUID -o value ${boot_disk}2)    /boot/efi   vfat    noauto,rw,noatime,fmask=0022,dmask=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro  0 2
+EOF
 
 # Configuring
 mv /root/crypto_keyfile.bin /mnt
@@ -82,9 +87,9 @@ echo "en_US.UTF-8 UTF-8" > /mnt/etc/locale.gen
 echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
 echo "KEYMAP=dvorak" > /mnt/etc/vconsole.conf
 echo ${hostname} > /mnt/etc/hostname
-sed -i -e 's/^BINARIES=""$/BINARIES="\/usr\/bin\/btrfs"/g' /mnt/etc/mkinitcpio.conf
-sed -i -e 's/^FILES=""$/FILES="\/crypto_keyfile.bin"/g' /mnt/etc/mkinitcpio.conf
-sed -i -e 's/^HOOKS=".*"$/HOOKS="base udev autodetect modconf keyboard keymap block encrypt filesystems fsck"/g' /mnt/etc/mkinitcpio.conf
+sed -ie 's/^BINARIES=""$/BINARIES="\/usr\/bin\/btrfs"/g' /mnt/etc/mkinitcpio.conf
+sed -ie 's/^FILES=""$/FILES="\/crypto_keyfile.bin"/g' /mnt/etc/mkinitcpio.conf
+sed -ie 's/^HOOKS=".*"$/HOOKS="base udev autodetect modconf keyboard keymap block encrypt filesystems fsck"/g' /mnt/etc/mkinitcpio.conf
 
 arch-chroot /mnt << EOF
 hwclock --systohc # Assumes hardware clock is UTC
