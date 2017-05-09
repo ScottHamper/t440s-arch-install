@@ -116,6 +116,12 @@ rm /boot/refind_linux.conf
 mkdir /boot/efi/EFI/refind/themes
 git clone -b t440s --depth 1 https://github.com/ScottHamper/rEFInd-minimal.git /boot/efi/EFI/refind/themes/rEFInd-minimal
 rm -rf /boot/efi/EFI/refind/themes/rEFInd-minimal/.git
+
+systemctl enable systemd-networkd.service
+systemctl enable systemd-resolved.service
+systemctl enable wpa_supplicant@wlp3s0.service
+rm /etc/resolv.conf
+ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
 EOF
 
 cat << EOF > /mnt/boot/efi/EFI/refind/refind.conf
@@ -139,3 +145,27 @@ Defaults:%wheel targetpw
 %wheel ALL=(ALL) ALL
 %wheel ALL= NOPASSWD: /usr/bin/halt,/usr/bin/poweroff,/usr/bin/reboot,/usr/bin/pacman -Syu
 EOF
+
+cat << EOF > /mnt/etc/systemd/network/01-wired.network
+[Match]
+Name=enp0s25
+
+[Network]
+DHCP=ipv4
+EOF
+
+cat << EOF > /mnt/etc/systemd/network/01-wireless.network
+[Match]
+Name=wlp3s0
+
+[Network]
+DHCP=ipv4
+EOF
+
+cat << EOF > /mnt/etc/wpa_supplicant/wpa_supplicant-wlp3s0.conf
+ctrl_interface=/var/run/wpa_supplicant
+ctrl_interface_group=wheel
+update_config=1
+EOF
+
+chmod 600 /mnt/etc/wpa_supplicant/wpa_supplicant-wlp3s0.conf
