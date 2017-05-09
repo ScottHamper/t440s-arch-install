@@ -106,6 +106,7 @@ sed -ie 's/^FILES=""$/FILES="\/crypto_keyfile.bin"/g' /mnt/etc/mkinitcpio.conf
 sed -ie 's/^HOOKS=".*"$/HOOKS="base udev autodetect modconf keyboard keymap block encrypt filesystems fsck"/g' /mnt/etc/mkinitcpio.conf
 
 arch-chroot /mnt << EOF
+useradd -m -G wheel scott
 hwclock --systohc # Assumes hardware clock is UTC
 locale-gen
 mkinitcpio -p linux
@@ -115,8 +116,6 @@ rm /boot/refind_linux.conf
 mkdir /boot/efi/EFI/refind/themes
 git clone -b t440s --depth 1 https://github.com/ScottHamper/rEFInd-minimal.git /boot/efi/EFI/refind/themes/rEFInd-minimal
 rm -rf /boot/efi/EFI/refind/themes/rEFInd-minimal/.git
-
-useradd -m -G wheel scott
 EOF
 
 cat << EOF > /mnt/boot/efi/EFI/refind/refind.conf
@@ -134,7 +133,7 @@ menuentry "Arch Linux" {
 }
 EOF
 
-cat << EOF > /mnt/etc/sudoers
+cat << EOF > /mnt/etc/sudoers.d/01-base
 Defaults editor=/usr/bin/nano, !env_editor
 Defaults:%wheel targetpw
 %wheel ALL=(ALL) ALL
