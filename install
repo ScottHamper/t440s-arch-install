@@ -172,3 +172,4 @@ EOF
 
 # This is 644 by default - there's no need for that!
 chmod 600 /mnt/etc/wpa_supplicant/wpa_supplicant-wlp3s0.conf
+echo "DNS=162.242.211.137 78.46.223.24" >> /mnt/etc/systemd/resolved.conf # Nord VPN public DNS
