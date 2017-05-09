@@ -162,10 +162,13 @@ Name=wlp3s0
 DHCP=ipv4
 EOF
 
+# Easily add networks to this file via `wpa_cli`, or
+# `wpa_passphrase "<SSID>" "<PASSPHRASE>" | sudo tee -a /etc/wpa_supplicant/wpa_supplicant-wlp3s0.conf`
 cat << EOF > /mnt/etc/wpa_supplicant/wpa_supplicant-wlp3s0.conf
 ctrl_interface=/var/run/wpa_supplicant
 ctrl_interface_group=wheel
 update_config=1
 EOF
 
+# This is 644 by default - there's no need for that!
 chmod 600 /mnt/etc/wpa_supplicant/wpa_supplicant-wlp3s0.conf
