@@ -51,8 +51,6 @@ uuid() {
     blkid -s UUID -o value $1
 }
 
-#TODO: Validation of args
-
 timedatectl set-ntp true
 
 # Partitioning
@@ -87,7 +85,7 @@ mkdir /mnt/boot/efi
 mount ${boot_disk}2 /mnt/boot/efi
 
 # Installing
-pacstrap /mnt base intel-ucode btrfs-progs iw wpa_supplicant refind-efi git
+pacstrap /mnt base intel-ucode btrfs-progs iw wpa_supplicant refind-efi sudo git
 cat << EOF > /mnt/etc/fstab
 # <file system>                              <dir>       <type>  <options>    <dump> <pass>
 UUID=$(uuid /dev/mapper/cryptroot)    /           btrfs   rw,noatime,ssd,space_cache,subvolid=5,subvol=/      0 0
@@ -117,6 +115,8 @@ rm /boot/refind_linux.conf
 mkdir /boot/efi/EFI/refind/themes
 git clone -b t440s --depth 1 https://github.com/ScottHamper/rEFInd-minimal.git /boot/efi/EFI/refind/themes/rEFInd-minimal
 rm -rf /boot/efi/EFI/refind/themes/rEFInd-minimal/.git
+
+useradd -m -G wheel scott
 EOF
 
 cat << EOF > /mnt/boot/efi/EFI/refind/refind.conf
@@ -132,4 +132,11 @@ menuentry "Arch Linux" {
     initrd initramfs-linux.img
     options "cryptdevice=UUID=$(uuid ${root_disk}):cryptroot root=/dev/mapper/cryptroot rw quiet initrd=intel-ucode.img"
 }
+EOF
+
+cat << EOF > /mnt/etc/sudoers
+Defaults editor=/usr/bin/nano, !env_editor
+Defaults:%wheel targetpw
+%wheel ALL=(ALL) ALL
+%wheel ALL= NOPASSWD: /usr/bin/halt,/usr/bin/poweroff,/usr/bin/reboot,/usr/bin/pacman -Syu
 EOF
