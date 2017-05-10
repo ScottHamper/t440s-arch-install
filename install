@@ -120,8 +120,6 @@ rm -rf /boot/efi/EFI/refind/themes/rEFInd-minimal/.git
 systemctl enable systemd-networkd.service
 systemctl enable systemd-resolved.service
 systemctl enable wpa_supplicant@wlp3s0.service
-rm /etc/resolv.conf
-ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
 EOF
 
 cat << EOF > /mnt/boot/efi/EFI/refind/refind.conf
@@ -162,6 +160,8 @@ Name=wlp3s0
 DHCP=ipv4
 EOF
 
+rm /mnt/etc/resolv.conf
+ln -s /run/systemd/resolve/resolv.conf /mnt/etc/resolv.conf
 cat << EOF >> /mnt/etc/systemd/resolved.conf
 # NordVPN
 DNS=162.242.211.137 78.46.223.24
