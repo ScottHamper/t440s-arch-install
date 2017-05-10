@@ -162,6 +162,13 @@ Name=wlp3s0
 DHCP=ipv4
 EOF
 
+cat << EOF >> /mnt/etc/systemd/resolved.conf
+# NordVPN
+DNS=162.242.211.137 78.46.223.24
+FallbackDNS=
+DNSSEC=yes
+EOF
+
 # Easily add networks to this file via `wpa_cli`, or
 # `wpa_passphrase "<SSID>" "<PASSPHRASE>" | sudo tee -a /etc/wpa_supplicant/wpa_supplicant-wlp3s0.conf`
 cat << EOF > /mnt/etc/wpa_supplicant/wpa_supplicant-wlp3s0.conf
@@ -172,9 +179,3 @@ EOF
 
 # This is 644 by default - there's no need for that!
 chmod 600 /mnt/etc/wpa_supplicant/wpa_supplicant-wlp3s0.conf
-cat << EOF >> /mnt/etc/systemd/resolved.conf
-# NordVPN
-DNS=162.242.211.137 78.46.223.24
-FallbackDNS=
-DNSSEC=yes
-EOF
