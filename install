@@ -53,7 +53,13 @@ uuid() {
 
 timedatectl set-ntp true
 
+
+# ================
+# Disk Preparation
+# ================
+
 # Partitioning
+# ------------
 sgdisk --clear ${root_disk}
 sgdisk -n 1:0:0 ${root_disk}
 
@@ -61,31 +67,42 @@ sgdisk --clear ${boot_disk}
 sgdisk -n 1:0:+200M ${boot_disk}
 sgdisk -n 2:0:+512M -t 2:ef00 ${boot_disk}
 
-# Setting up LUKS
+# Setting Up LUKS
+# ---------------
 head -c 4096 < /dev/random > /root/crypto_keyfile.bin
 chmod 0000 /root/crypto_keyfile.bin
 cryptsetup -q --use-random --key-size 512 --iter-time 2000 luksFormat ${root_disk} /root/crypto_keyfile.bin
 cryptsetup open ${root_disk} cryptroot --key-file /root/crypto_keyfile.bin
 
 # Formatting
+# ----------
 mkfs.btrfs -f /dev/mapper/cryptroot
 mkfs.btrfs -f ${boot_disk}1
 mkfs.vfat -F32 ${boot_disk}2
 
 # Labeling
+# --------
 btrfs filesystem label /dev/mapper/cryptroot T440S_ROOT
 btrfs filesystem label ${boot_disk}1 T440S_BOOT
 fatlabel ${boot_disk}2 T440S_ESP
 
 # Mounting
+# --------
 mount /dev/mapper/cryptroot /mnt
 mkdir /mnt/boot
 mount ${boot_disk}1 /mnt/boot
 mkdir /mnt/boot/efi
 mount ${boot_disk}2 /mnt/boot/efi
 
-# Installing
+
+# ============
+# Installation
+# ============
+
 pacstrap /mnt base intel-ucode refind-efi btrfs-progs sudo iw wpa_supplicant ldns git
+
+# Filesystem Table
+# ----------------
 cat << EOF > /mnt/etc/fstab
 # <file system>                              <dir>       <type>  <options>    <dump> <pass>
 UUID=$(uuid /dev/mapper/cryptroot)    /           btrfs   rw,noatime,ssd,space_cache,subvolid=5,subvol=/      0 0
@@ -93,34 +110,23 @@ UUID=$(uuid ${boot_disk}1)    /boot       btrfs   noauto,rw,noatime,space_cache,
 UUID=$(uuid ${boot_disk}2)    /boot/efi   vfat    noauto,rw,noatime,fmask=0022,dmask=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,errors=remount-ro  0 2
 EOF
 
-# Configuring
+# Mkinitcpio for Crypto, Etc
+# --------------------------
 mv /root/crypto_keyfile.bin /mnt
 chmod 600 /mnt/boot/initramfs-linux*
-ln -sf /usr/share/zoneinfo/America/New_York /mnt/etc/localtime
-echo "en_US.UTF-8 UTF-8" > /mnt/etc/locale.gen
-echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
-echo "KEYMAP=dvorak" > /mnt/etc/vconsole.conf
-echo ${hostname} > /mnt/etc/hostname
 sed -ie 's/^BINARIES=""$/BINARIES="\/usr\/bin\/btrfs"/g' /mnt/etc/mkinitcpio.conf
 sed -ie 's/^FILES=""$/FILES="\/crypto_keyfile.bin"/g' /mnt/etc/mkinitcpio.conf
 sed -ie 's/^HOOKS=".*"$/HOOKS="base udev autodetect modconf keyboard keymap block encrypt filesystems fsck"/g' /mnt/etc/mkinitcpio.conf
+arch-chroot /mnt "mkinitcpio -p linux"
 
+# Bootloader
+# ----------
 arch-chroot /mnt << EOF
-useradd -m -G wheel scott
-hwclock --systohc # Assumes hardware clock is UTC
-locale-gen
-mkinitcpio -p linux
-
 refind-install
 rm /boot/refind_linux.conf
 mkdir /boot/efi/EFI/refind/themes
 git clone -b t440s --depth 1 https://github.com/ScottHamper/rEFInd-minimal.git /boot/efi/EFI/refind/themes/rEFInd-minimal
 rm -rf /boot/efi/EFI/refind/themes/rEFInd-minimal/.git
-
-systemctl enable systemd-networkd.service
-systemctl enable systemd-resolved.service
-systemctl enable wpa_supplicant@wlp3s0.service
-systemctl enable iptables.service
 EOF
 
 cat << EOF > /mnt/boot/efi/EFI/refind/refind.conf
@@ -138,6 +144,30 @@ menuentry "Arch Linux" {
 }
 EOF
 
+
+# =============
+# Configuration
+# =============
+
+# Identity
+# --------
+echo ${hostname} > /mnt/etc/hostname
+arch-chroot /mnt "useradd -m -G wheel scott"
+
+# Time
+# ----
+ln -sf /usr/share/zoneinfo/America/New_York /mnt/etc/localtime
+arch-chroot /mnt "hwclock --systohc" # Assumes hardware clock is UTC
+
+# Locale
+# ------
+echo "en_US.UTF-8 UTF-8" > /mnt/etc/locale.gen
+echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
+echo "KEYMAP=dvorak" > /mnt/etc/vconsole.conf
+arch-chroot /mnt "locale-gen"
+
+# Sudo
+# ----
 cat << EOF > /mnt/etc/sudoers.d/01-base
 Defaults editor=/usr/bin/nano, !env_editor
 Defaults:%wheel targetpw
@@ -145,6 +175,8 @@ Defaults:%wheel targetpw
 %wheel ALL= NOPASSWD: /usr/bin/halt,/usr/bin/poweroff,/usr/bin/reboot,/usr/bin/pacman -Syu
 EOF
 
+# Basic Networking
+# ----------------
 cat << EOF > /mnt/etc/systemd/network/01-wired.network
 [Match]
 Name=enp0s25
@@ -181,6 +213,14 @@ EOF
 # This is 644 by default - there's no need for that!
 chmod 600 /mnt/etc/wpa_supplicant/wpa_supplicant-wlp3s0.conf
 
+arch-chroot /mnt << EOF
+systemctl enable systemd-networkd.service
+systemctl enable systemd-resolved.service
+systemctl enable wpa_supplicant@wlp3s0.service
+EOF
+
+# Firewall
+# --------
 cat << EOF > /mnt/etc/iptables/iptables.rules
 *filter
 :INPUT DROP [0:0]
@@ -199,3 +239,5 @@ cat << EOF > /mnt/etc/iptables/iptables.rules
 -A INPUT -j REJECT --reject-with icmp-proto-unreachable
 COMMIT
 EOF
+
+arch-chroot /mnt "systemctl enable iptables.service"
