@@ -117,7 +117,7 @@ chmod 600 /mnt/boot/initramfs-linux*
 sed -ie 's/^BINARIES=""$/BINARIES="\/usr\/bin\/btrfs"/g' /mnt/etc/mkinitcpio.conf
 sed -ie 's/^FILES=""$/FILES="\/crypto_keyfile.bin"/g' /mnt/etc/mkinitcpio.conf
 sed -ie 's/^HOOKS=".*"$/HOOKS="base udev autodetect modconf keyboard keymap block encrypt filesystems fsck"/g' /mnt/etc/mkinitcpio.conf
-arch-chroot /mnt "mkinitcpio -p linux"
+arch-chroot /mnt mkinitcpio -p linux
 
 # Bootloader
 # ----------
@@ -152,19 +152,19 @@ EOF
 # Identity
 # --------
 echo ${hostname} > /mnt/etc/hostname
-arch-chroot /mnt "useradd -m -G wheel scott"
+arch-chroot /mnt useradd -m -G wheel scott
 
 # Time
 # ----
 ln -sf /usr/share/zoneinfo/America/New_York /mnt/etc/localtime
-arch-chroot /mnt "hwclock --systohc" # Assumes hardware clock is UTC
+arch-chroot /mnt hwclock --systohc # Assumes hardware clock is UTC
 
 # Locale
 # ------
 echo "en_US.UTF-8 UTF-8" > /mnt/etc/locale.gen
 echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
 echo "KEYMAP=dvorak" > /mnt/etc/vconsole.conf
-arch-chroot /mnt "locale-gen"
+arch-chroot /mnt locale-gen
 
 # Sudo
 # ----
@@ -240,4 +240,4 @@ cat << EOF > /mnt/etc/iptables/iptables.rules
 COMMIT
 EOF
 
-arch-chroot /mnt "systemctl enable iptables.service"
+arch-chroot /mnt systemctl enable iptables.service
